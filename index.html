@@ -1,0 +1,1493 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="老王螢幕錄影工具 - 免安裝網頁版螢幕錄影工具，支援預約錄影、時長設定、暫停繼續等功能">
+    <title>老王螢幕錄影工具</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f0f23 100%);
+            font-family: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
+            color: #fff;
+            padding: 20px;
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        /* 動態背景 */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle at 20% 80%, rgba(233, 69, 96, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(83, 52, 131, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(52, 152, 219, 0.05) 0%, transparent 40%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .main-panel {
+            width: 480px;
+            flex-shrink: 0;
+            background: rgba(15, 52, 96, 0.4);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 20px;
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+
+        .help-panel {
+            flex: 1;
+            max-width: 600px;
+            min-width: 360px;
+            background: rgba(15, 52, 96, 0.3);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 20px;
+            padding: 32px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .help-panel h2 {
+            font-size: 24px;
+            margin-bottom: 24px;
+            color: #e94560;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(233, 69, 96, 0.3);
+        }
+
+        .help-section {
+            margin-bottom: 32px;
+        }
+
+        .help-section h3 {
+            font-size: 18px;
+            color: #3498db;
+            margin-bottom: 16px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(52, 152, 219, 0.3);
+        }
+
+        .step-list {
+            list-style: none;
+            counter-reset: step;
+        }
+
+        .step-list li {
+            counter-increment: step;
+            padding: 12px 0 12px 42px;
+            position: relative;
+            font-size: 16px;
+            line-height: 1.8;
+            color: #ccc;
+            border-left: 2px solid rgba(255, 255, 255, 0.1);
+            margin-left: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .step-list li:hover {
+            color: #fff;
+            border-left-color: #e94560;
+        }
+
+        .step-list li:before {
+            content: counter(step);
+            position: absolute;
+            left: -16px;
+            top: 10px;
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #e94560, #533483);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(233, 69, 96, 0.4);
+        }
+
+        .step-list li:last-child {
+            border-left-color: transparent;
+        }
+
+        .tip-box {
+            background: rgba(0, 217, 165, 0.08);
+            border: 1px solid rgba(0, 217, 165, 0.3);
+            border-radius: 12px;
+            padding: 20px;
+            font-size: 15px;
+            color: #00d9a5;
+        }
+
+        .tip-box strong {
+            display: block;
+            margin-bottom: 12px;
+            font-size: 17px;
+        }
+
+        .tip-box ul {
+            padding-left: 22px;
+            margin: 0;
+        }
+
+        .tip-box li {
+            margin-bottom: 8px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header h1 {
+            font-size: 30px;
+            background: linear-gradient(90deg, #e94560, #ff6b8a, #533483);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradient-shift 3s ease infinite;
+        }
+
+        @keyframes gradient-shift {
+
+            0%,
+            100% {
+                background-position: 0% center;
+            }
+
+            50% {
+                background-position: 100% center;
+            }
+        }
+
+        .header .version {
+            font-size: 14px;
+            color: #888;
+            margin-top: 8px;
+            letter-spacing: 1px;
+        }
+
+        .status-area {
+            text-align: center;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(15, 52, 96, 0.8), rgba(10, 22, 40, 0.8));
+            border-radius: 16px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .status-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #00d9a5;
+            animation: pulse 2s infinite;
+            box-shadow: 0 0 10px rgba(0, 217, 165, 0.5);
+        }
+
+        .status-dot.recording {
+            width: 16px;
+            height: 16px;
+            background: #ff4757;
+            animation: pulse-rec 1s infinite;
+            box-shadow: 0 0 15px rgba(255, 71, 87, 0.6);
+        }
+
+        .status-dot.paused {
+            background: #ffc107;
+            animation: none;
+            box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+        }
+
+        .status-dot.scheduled {
+            background: #3498db;
+            animation: pulse 1.5s infinite;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scale(0.9);
+            }
+        }
+
+        @keyframes pulse-rec {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+                box-shadow: 0 0 10px rgba(255, 71, 87, 0.6);
+            }
+
+            50% {
+                opacity: 0.8;
+                transform: scale(1.2);
+                box-shadow: 0 0 25px rgba(255, 71, 87, 0.8);
+            }
+        }
+
+        #statusText {
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .timer {
+            font-size: 52px;
+            font-weight: bold;
+            font-family: 'Consolas', 'Monaco', monospace;
+            letter-spacing: 4px;
+            background: linear-gradient(180deg, #fff 0%, #aaa 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .settings {
+            margin-bottom: 24px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 16px;
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-row select {
+            background: rgba(22, 33, 62, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 15px;
+            min-width: 180px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .setting-row select:hover {
+            border-color: #e94560;
+        }
+
+        .setting-row select:focus {
+            outline: none;
+            border-color: #e94560;
+            box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.2);
+        }
+
+        .datetime-picker {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .datetime-unit {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .datetime-unit label {
+            font-size: 11px;
+            color: #888;
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .spinner-btn {
+            background: rgba(15, 52, 96, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #e94560;
+            width: 44px;
+            height: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .spinner-btn:hover {
+            background: #e94560;
+            color: #fff;
+            transform: scale(1.05);
+        }
+
+        .spinner-btn.up {
+            border-radius: 8px 8px 0 0;
+        }
+
+        .spinner-btn.down {
+            border-radius: 0 0 8px 8px;
+        }
+
+        .spinner-value {
+            background: rgba(22, 33, 62, 0.9);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 8px 12px;
+            font-size: 20px;
+            font-weight: bold;
+            min-width: 44px;
+            text-align: center;
+            font-family: 'Consolas', monospace;
+        }
+
+        .datetime-separator {
+            font-size: 20px;
+            font-weight: bold;
+            color: #666;
+            margin: 0 6px;
+            padding-top: 24px;
+        }
+
+        .schedule-section {
+            background: rgba(10, 22, 40, 0.6);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .schedule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .schedule-header label {
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toggle {
+            position: relative;
+            width: 52px;
+            height: 28px;
+        }
+
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(58, 58, 92, 0.8);
+            border-radius: 28px;
+            transition: 0.3s;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: 0.3s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle input:checked+.toggle-slider {
+            background: linear-gradient(135deg, #e94560, #533483);
+        }
+
+        .toggle input:checked+.toggle-slider:before {
+            transform: translateX(24px);
+        }
+
+        .schedule-content {
+            display: none;
+            padding-top: 16px;
+        }
+
+        .schedule-content.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .schedule-info {
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px solid rgba(52, 152, 219, 0.3);
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 16px;
+            font-size: 15px;
+            text-align: center;
+            display: none;
+        }
+
+        .schedule-info.show {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .schedule-info .time {
+            font-weight: bold;
+            color: #3498db;
+            font-size: 18px;
+            margin-top: 8px;
+        }
+
+        .btn-small {
+            background: transparent;
+            border: 1px solid #ff4757;
+            color: #ff4757;
+            padding: 8px 18px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-small:hover {
+            background: rgba(255, 71, 87, 0.1);
+            transform: scale(1.02);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 18px;
+            border: none;
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .btn:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #e94560, #533483);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(233, 69, 96, 0.5);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #ff4757, #c0392b);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 71, 87, 0.5);
+        }
+
+        .btn-secondary {
+            background: rgba(15, 52, 96, 0.8);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background: rgba(25, 70, 120, 0.8);
+            transform: translateY(-1px);
+        }
+
+        .btn-schedule {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-schedule:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(52, 152, 219, 0.5);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 16px;
+        }
+
+        .btn-group .btn {
+            flex: 1;
+        }
+
+        .message {
+            margin-top: 18px;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            text-align: center;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .message.show {
+            display: block;
+        }
+
+        .message.success {
+            background: rgba(0, 217, 165, 0.1);
+            border: 1px solid rgba(0, 217, 165, 0.3);
+            color: #00d9a5;
+        }
+
+        .message.error {
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            color: #ff4757;
+        }
+
+        .message.info {
+            background: rgba(233, 69, 96, 0.1);
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            color: #e94560;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .note {
+            margin-top: 24px;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            font-size: 13px;
+            color: #888;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .custom-input {
+            width: 90px;
+            background: rgba(22, 33, 62, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .custom-input:focus {
+            outline: none;
+            border-color: #e94560;
+            box-shadow: 0 0 0 3px rgba(233, 69, 96, 0.2);
+        }
+
+        /* 響應式設計 */
+        @media (max-width: 800px) {
+            body {
+                padding: 15px;
+                gap: 16px;
+            }
+
+            .main-panel,
+            .help-panel {
+                width: 100%;
+                max-width: 100%;
+            }
+        }
+
+        /* 瀏覽器不支援提示 */
+        .browser-warning {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .browser-warning.show {
+            display: flex;
+        }
+
+        .browser-warning h2 {
+            color: #e94560;
+            margin-bottom: 20px;
+            font-size: 24px;
+        }
+
+        .browser-warning p {
+            color: #ccc;
+            font-size: 14px;
+            max-width: 500px;
+            line-height: 1.8;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 瀏覽器不支援警告 -->
+    <div class="browser-warning" id="browserWarning">
+        <h2>⚠️ 瀏覽器不支援</h2>
+        <p>您的瀏覽器不支援螢幕錄影功能。<br><br>
+            請使用最新版本的 <strong>Chrome</strong>、<strong>Edge</strong>、<strong>Firefox</strong> 或 <strong>Safari</strong>
+            瀏覽器，
+            並確保透過 <strong>HTTPS</strong> 或 <strong>localhost</strong> 開啟此頁面。</p>
+    </div>
+
+    <div class="main-panel">
+        <div class="header">
+            <h1>🎬 老王螢幕錄影工具</h1>
+            <div class="version">v1.0.1 網頁版</div>
+        </div>
+
+        <div class="status-area">
+            <div class="status-indicator">
+                <span class="status-dot" id="statusDot"></span>
+                <span id="statusText">準備就緒</span>
+            </div>
+            <div class="timer" id="timer">00:00:00</div>
+        </div>
+
+        <div class="settings" id="settings">
+            <div class="setting-row">
+                <label>⏱️ 錄影時長</label>
+                <select id="duration">
+                    <option value="0" selected>無限制</option>
+                    <option value="60">1 分鐘</option>
+                    <option value="300">5 分鐘</option>
+                    <option value="600">10 分鐘</option>
+                    <option value="1800">30 分鐘</option>
+                    <option value="3600">1 小時</option>
+                    <option value="custom">自訂...</option>
+                </select>
+            </div>
+            <div class="setting-row custom-duration" id="customDurationRow" style="display: none;">
+                <label>自訂時長</label>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <input type="number" id="customMinutes" min="1" max="999" value="15" class="custom-input">
+                    <span style="font-size: 12px;">分鐘</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="schedule-section">
+            <div class="schedule-header">
+                <label>📅 預約錄影</label>
+                <label class="toggle">
+                    <input type="checkbox" id="scheduleToggle">
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="schedule-content" id="scheduleContent">
+                <div class="datetime-picker">
+                    <div class="datetime-unit">
+                        <label>月</label>
+                        <div class="spinner">
+                            <button class="spinner-btn up" data-field="month" data-dir="1">▲</button>
+                            <div class="spinner-value" id="scheduleMonth">01</div>
+                            <button class="spinner-btn down" data-field="month" data-dir="-1">▼</button>
+                        </div>
+                    </div>
+                    <span class="datetime-separator">/</span>
+                    <div class="datetime-unit">
+                        <label>日</label>
+                        <div class="spinner">
+                            <button class="spinner-btn up" data-field="day" data-dir="1">▲</button>
+                            <div class="spinner-value" id="scheduleDay">01</div>
+                            <button class="spinner-btn down" data-field="day" data-dir="-1">▼</button>
+                        </div>
+                    </div>
+                    <span class="datetime-separator"> </span>
+                    <div class="datetime-unit">
+                        <label>時</label>
+                        <div class="spinner">
+                            <button class="spinner-btn up" data-field="hour" data-dir="1">▲</button>
+                            <div class="spinner-value" id="scheduleHour">12</div>
+                            <button class="spinner-btn down" data-field="hour" data-dir="-1">▼</button>
+                        </div>
+                    </div>
+                    <span class="datetime-separator">:</span>
+                    <div class="datetime-unit">
+                        <label>分</label>
+                        <div class="spinner">
+                            <button class="spinner-btn up" data-field="minute" data-dir="1">▲</button>
+                            <div class="spinner-value" id="scheduleMinute">00</div>
+                            <button class="spinner-btn down" data-field="minute" data-dir="-1">▼</button>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn btn-schedule" id="setScheduleBtn" style="margin-top: 14px;">設定預約</button>
+            </div>
+            <div class="schedule-info" id="scheduleInfo">
+                <div>⏰ 預約時間</div>
+                <div class="time" id="scheduledTime"></div>
+                <button class="btn-small" id="cancelScheduleBtn">取消預約</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn btn-primary" id="startBtn">● 開始錄影</button>
+            <button class="btn btn-danger hidden" id="stopBtn">■ 停止錄影</button>
+            <div class="btn-group hidden" id="pauseGroup">
+                <button class="btn btn-secondary" id="pauseBtn">⏸ 暫停</button>
+                <button class="btn btn-secondary hidden" id="resumeBtn">▶ 繼續</button>
+            </div>
+        </div>
+
+        <div class="message" id="message"></div>
+
+        <div class="note">
+            💡 保持此頁面開啟以維持錄影（可切換到其他分頁）
+        </div>
+    </div>
+
+    <div class="help-panel">
+        <h2>📖 使用說明</h2>
+
+        <div class="help-section">
+            <h3>🎬 錄影步驟</h3>
+            <ol class="step-list">
+                <li>選擇錄影時長（預設為無限制，可自訂分鐘數）</li>
+                <li>點擊<strong>「● 開始錄影」</strong>按鈕</li>
+                <li>在彈出的選擇視窗中，選擇要錄製的內容：
+                    <ul style="margin-top: 6px; padding-left: 16px; color: #888;">
+                        <li>「分頁」- 錄製單一瀏覽器分頁</li>
+                        <li>「視窗」- 錄製整個應用程式視窗</li>
+                        <li>「整個畫面」- 錄製完整螢幕</li>
+                    </ul>
+                </li>
+                <li>勾選<strong>「分享系統音訊」</strong>以錄製聲音</li>
+                <li>點擊<strong>「分享」</strong>開始錄影</li>
+                <li>錄影完成後，點擊<strong>「■ 停止錄影」</strong></li>
+                <li>檔案將自動下載為 WebM 格式</li>
+            </ol>
+        </div>
+
+        <div class="help-section">
+            <h3>📅 預約錄影（預備模式）</h3>
+            <ol class="step-list">
+                <li>開啟「預約錄影」開關</li>
+                <li>使用 ▲▼ 調整月/日/時/分</li>
+                <li>點擊「設定預約」</li>
+                <li><strong>立即選擇</strong>要錄製的內容並點擊「分享」</li>
+                <li>進入「預備中」狀態，等待預約時間</li>
+                <li>時間到時<strong>自動開始錄影</strong></li>
+            </ol>
+        </div>
+
+        <div class="tip-box">
+            <strong>💡 小提示</strong>
+            <ul>
+                <li>錄影期間請保持此頁面開啟（可切換分頁）</li>
+                <li>要錄製系統音訊，請記得勾選「分享系統音訊」</li>
+                <li>錄影檔案將儲存在瀏覽器預設下載資料夾</li>
+                <li>可隨時暫停/繼續錄影</li>
+                <li>建議使用 Chrome、Edge 或 Firefox 瀏覽器</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * 老王螢幕錄影工具 - 網頁版 v1.0.0
+         * 免安裝，直接在瀏覽器開啟即可使用
+         */
+
+        // 檢查瀏覽器支援
+        (function checkBrowserSupport() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+                document.getElementById('browserWarning').classList.add('show');
+            }
+        })();
+
+        // DOM 元素
+        const elements = {
+            statusDot: document.getElementById('statusDot'),
+            statusText: document.getElementById('statusText'),
+            timer: document.getElementById('timer'),
+            settings: document.getElementById('settings'),
+            duration: document.getElementById('duration'),
+            scheduleToggle: document.getElementById('scheduleToggle'),
+            scheduleContent: document.getElementById('scheduleContent'),
+            setScheduleBtn: document.getElementById('setScheduleBtn'),
+            scheduleInfo: document.getElementById('scheduleInfo'),
+            scheduledTime: document.getElementById('scheduledTime'),
+            cancelScheduleBtn: document.getElementById('cancelScheduleBtn'),
+            startBtn: document.getElementById('startBtn'),
+            stopBtn: document.getElementById('stopBtn'),
+            pauseBtn: document.getElementById('pauseBtn'),
+            resumeBtn: document.getElementById('resumeBtn'),
+            pauseGroup: document.getElementById('pauseGroup'),
+            message: document.getElementById('message'),
+            scheduleMonth: document.getElementById('scheduleMonth'),
+            scheduleDay: document.getElementById('scheduleDay'),
+            scheduleHour: document.getElementById('scheduleHour'),
+            scheduleMinute: document.getElementById('scheduleMinute'),
+            customDurationRow: document.getElementById('customDurationRow'),
+            customMinutes: document.getElementById('customMinutes')
+        };
+
+        // 狀態變數
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let recordingStream = null;
+        let timerInterval = null;
+        let elapsedSeconds = 0;
+        let maxDuration = 0;
+        let durationTimeout = null;
+        let scheduleTimeout = null;
+        let scheduledDateTime = null;
+        let standbyStream = null;
+
+        // 預約時間狀態
+        let scheduleDate = {
+            month: new Date().getMonth() + 1,
+            day: new Date().getDate(),
+            hour: new Date().getHours(),
+            minute: new Date().getMinutes() + 1
+        };
+
+        // 處理分鐘溢出
+        if (scheduleDate.minute >= 60) {
+            scheduleDate.minute = 0;
+            scheduleDate.hour++;
+            if (scheduleDate.hour >= 24) {
+                scheduleDate.hour = 0;
+                scheduleDate.day++;
+            }
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            setupEventListeners();
+            updateDateTimeDisplay();
+        });
+
+        function updateDateTimeDisplay() {
+            elements.scheduleMonth.textContent = String(scheduleDate.month).padStart(2, '0');
+            elements.scheduleDay.textContent = String(scheduleDate.day).padStart(2, '0');
+            elements.scheduleHour.textContent = String(scheduleDate.hour).padStart(2, '0');
+            elements.scheduleMinute.textContent = String(scheduleDate.minute).padStart(2, '0');
+        }
+
+        function adjustDateTime(field, direction) {
+            const now = new Date();
+            const currentYear = now.getFullYear();
+
+            switch (field) {
+                case 'month':
+                    scheduleDate.month += direction;
+                    if (scheduleDate.month > 12) scheduleDate.month = 1;
+                    if (scheduleDate.month < 1) scheduleDate.month = 12;
+                    break;
+                case 'day':
+                    const daysInMonth = new Date(currentYear, scheduleDate.month, 0).getDate();
+                    scheduleDate.day += direction;
+                    if (scheduleDate.day > daysInMonth) scheduleDate.day = 1;
+                    if (scheduleDate.day < 1) scheduleDate.day = daysInMonth;
+                    break;
+                case 'hour':
+                    scheduleDate.hour += direction;
+                    if (scheduleDate.hour > 23) scheduleDate.hour = 0;
+                    if (scheduleDate.hour < 0) scheduleDate.hour = 23;
+                    break;
+                case 'minute':
+                    scheduleDate.minute += direction;
+                    if (scheduleDate.minute >= 60) scheduleDate.minute = 0;
+                    if (scheduleDate.minute < 0) scheduleDate.minute = 59;
+                    break;
+            }
+
+            updateDateTimeDisplay();
+        }
+
+        function getScheduleDateTime() {
+            const now = new Date();
+            const year = now.getFullYear();
+            return new Date(year, scheduleDate.month - 1, scheduleDate.day, scheduleDate.hour, scheduleDate.minute, 0);
+        }
+
+        function setupEventListeners() {
+            elements.startBtn.addEventListener('click', startRecording);
+            elements.stopBtn.addEventListener('click', stopRecording);
+            elements.pauseBtn.addEventListener('click', pauseRecording);
+            elements.resumeBtn.addEventListener('click', resumeRecording);
+
+            elements.duration.addEventListener('change', () => {
+                const isCustom = elements.duration.value === 'custom';
+                elements.customDurationRow.style.display = isCustom ? 'flex' : 'none';
+                saveSettings();
+            });
+
+            elements.customMinutes.addEventListener('change', saveSettings);
+
+            elements.scheduleToggle.addEventListener('change', (e) => {
+                elements.scheduleContent.classList.toggle('show', e.target.checked);
+            });
+
+            elements.setScheduleBtn.addEventListener('click', setSchedule);
+            elements.cancelScheduleBtn.addEventListener('click', cancelSchedule);
+
+            // 日期時間調整按鈕
+            document.querySelectorAll('.spinner-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const field = btn.dataset.field;
+                    const dir = parseInt(btn.dataset.dir);
+                    adjustDateTime(field, dir);
+                });
+            });
+        }
+
+        function loadSettings() {
+            try {
+                const savedDuration = localStorage.getItem('recorder_duration');
+                const savedCustomMinutes = localStorage.getItem('recorder_customMinutes');
+
+                if (savedDuration) {
+                    elements.duration.value = savedDuration;
+                    if (savedDuration === 'custom') {
+                        elements.customDurationRow.style.display = 'flex';
+                    }
+                }
+                if (savedCustomMinutes) {
+                    elements.customMinutes.value = savedCustomMinutes;
+                }
+            } catch (e) {
+                console.warn('無法載入設定:', e);
+            }
+        }
+
+        function saveSettings() {
+            try {
+                localStorage.setItem('recorder_duration', elements.duration.value);
+                localStorage.setItem('recorder_customMinutes', elements.customMinutes.value);
+            } catch (e) {
+                console.warn('無法儲存設定:', e);
+            }
+        }
+
+        function getDurationValue() {
+            if (elements.duration.value === 'custom') {
+                const mins = parseInt(elements.customMinutes.value) || 15;
+                return mins * 60;
+            }
+            return parseInt(elements.duration.value) || 0;
+        }
+
+        async function setSchedule() {
+            const scheduleDateTime = getScheduleDateTime();
+
+            if (scheduleDateTime <= new Date()) {
+                showMessage('時間必須是未來', 'error');
+                return;
+            }
+
+            showMessage('請選擇要錄製的內容...', 'info');
+
+            try {
+                standbyStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: true
+                });
+
+                const videoTracks = standbyStream.getVideoTracks();
+                if (videoTracks.length === 0) {
+                    throw new Error('無法取得視訊軌道');
+                }
+
+                videoTracks[0].onended = () => {
+                    if (standbyStream && !recordingStream) {
+                        showMessage('預備錄影已取消（使用者停止分享）', 'info');
+                        cancelSchedule();
+                    }
+                };
+
+            } catch (error) {
+                console.error('無法取得螢幕來源:', error);
+                if (error.name === 'NotAllowedError') {
+                    showMessage('已取消選擇', 'info');
+                } else {
+                    showMessage('錯誤: ' + (error.message || '無法取得螢幕來源'), 'error');
+                }
+                return;
+            }
+
+            scheduledDateTime = scheduleDateTime;
+            const duration = getDurationValue();
+
+            const delay = scheduleDateTime.getTime() - Date.now();
+            if (scheduleTimeout) clearTimeout(scheduleTimeout);
+
+            scheduleTimeout = setTimeout(() => {
+                showMessage('預約時間到！開始錄影...', 'info');
+                maxDuration = duration;
+                clearScheduleInfo();
+                startRecordingFromStandby();
+            }, delay);
+
+            const audioTracks = standbyStream.getAudioTracks();
+            showScheduleInfo(scheduleDateTime);
+            elements.scheduleToggle.checked = false;
+            elements.scheduleContent.classList.remove('show');
+            setStatus('預備中', 'scheduled');
+            showMessage(`預約已設定！${audioTracks.length > 0 ? '(含音訊)' : '(無音訊)'} 請保持此頁面開啟`, 'success');
+        }
+
+        function showScheduleInfo(date) {
+            elements.scheduledTime.textContent = date.toLocaleString('zh-TW');
+            elements.scheduleInfo.classList.add('show');
+            setStatus('已排程', 'scheduled');
+        }
+
+        function cancelSchedule() {
+            if (scheduleTimeout) {
+                clearTimeout(scheduleTimeout);
+                scheduleTimeout = null;
+            }
+
+            if (standbyStream) {
+                standbyStream.getTracks().forEach(t => t.stop());
+                standbyStream = null;
+            }
+
+            elements.scheduleInfo.classList.remove('show');
+            scheduledDateTime = null;
+            setStatus('準備就緒', '');
+            showMessage('已取消預約', 'info');
+        }
+
+        function clearScheduleInfo() {
+            elements.scheduleInfo.classList.remove('show');
+            scheduledDateTime = null;
+        }
+
+        function startRecordingFromStandby() {
+            if (!standbyStream) {
+                showMessage('預備串流已失效，請重新設定', 'error');
+                setStatus('準備就緒', '');
+                return;
+            }
+
+            try {
+                recordingStream = standbyStream;
+                standbyStream = null;
+
+                const audioTracks = recordingStream.getAudioTracks();
+                console.log(`從預備模式開始錄影，${audioTracks.length} 個音軌`);
+
+                recordedChunks = [];
+                const mimeType = getSupportedMimeType();
+
+                try {
+                    mediaRecorder = new MediaRecorder(recordingStream, {
+                        mimeType: mimeType,
+                        videoBitsPerSecond: 2500000
+                    });
+                } catch (e) {
+                    console.warn('MediaRecorder 配置失敗，使用預設值:', e);
+                    mediaRecorder = new MediaRecorder(recordingStream);
+                }
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0) {
+                        recordedChunks.push(e.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    saveRecording();
+                    cleanupRecording();
+                };
+
+                mediaRecorder.onerror = (e) => {
+                    console.error('MediaRecorder 錯誤:', e);
+                    showMessage('錄影發生錯誤', 'error');
+                    stopRecording();
+                };
+
+                recordingStream.getVideoTracks()[0].onended = () => {
+                    stopRecording();
+                };
+
+                mediaRecorder.start(1000);
+
+                updateUI(true);
+                startTimer();
+                showMessage(audioTracks.length > 0 ? '錄影中 (含音訊)' : '錄影中', 'success');
+
+                if (maxDuration > 0) {
+                    durationTimeout = setTimeout(() => {
+                        showMessage('時間到，自動停止', 'info');
+                        stopRecording();
+                    }, maxDuration * 1000);
+                }
+
+            } catch (error) {
+                console.error('從預備模式錄影錯誤:', error);
+                maxDuration = 0;
+
+                if (recordingStream) {
+                    recordingStream.getTracks().forEach(t => t.stop());
+                    recordingStream = null;
+                }
+
+                showMessage('錯誤: ' + (error.message || '未知錯誤'), 'error');
+                setStatus('準備就緒', '');
+            }
+        }
+
+        async function startRecording() {
+            try {
+                if (maxDuration === 0) {
+                    maxDuration = getDurationValue();
+                }
+
+                showMessage('正在啟動...', 'info');
+
+                recordingStream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: true
+                });
+
+                const videoTracks = recordingStream.getVideoTracks();
+                if (videoTracks.length === 0) {
+                    throw new Error('無法取得視訊軌道');
+                }
+
+                const audioTracks = recordingStream.getAudioTracks();
+                console.log(`取得 ${audioTracks.length} 個音軌`);
+
+                recordedChunks = [];
+                const mimeType = getSupportedMimeType();
+
+                try {
+                    mediaRecorder = new MediaRecorder(recordingStream, {
+                        mimeType: mimeType,
+                        videoBitsPerSecond: 2500000
+                    });
+                } catch (e) {
+                    console.warn('MediaRecorder 配置失敗，使用預設值:', e);
+                    mediaRecorder = new MediaRecorder(recordingStream);
+                }
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data && e.data.size > 0) {
+                        recordedChunks.push(e.data);
+                    }
+                };
+
+                mediaRecorder.onstop = () => {
+                    saveRecording();
+                    cleanupRecording();
+                };
+
+                mediaRecorder.onerror = (e) => {
+                    console.error('MediaRecorder 錯誤:', e);
+                    showMessage('錄影發生錯誤', 'error');
+                    stopRecording();
+                };
+
+                videoTracks[0].onended = () => {
+                    stopRecording();
+                };
+
+                await new Promise(r => setTimeout(r, 100));
+                mediaRecorder.start(1000);
+
+                updateUI(true);
+                startTimer();
+                showMessage(audioTracks.length > 0 ? '錄影中 (含音訊)' : '錄影中', 'success');
+
+                if (maxDuration > 0) {
+                    durationTimeout = setTimeout(() => {
+                        showMessage('時間到，自動停止', 'info');
+                        stopRecording();
+                    }, maxDuration * 1000);
+                }
+
+            } catch (error) {
+                console.error('錄影錯誤:', error);
+                maxDuration = 0;
+
+                if (recordingStream) {
+                    recordingStream.getTracks().forEach(t => t.stop());
+                    recordingStream = null;
+                }
+
+                if (error.name === 'NotAllowedError') {
+                    showMessage('已取消選擇', 'info');
+                } else if (error.name === 'NotFoundError') {
+                    showMessage('找不到可用的螢幕來源', 'error');
+                } else if (error.name === 'NotReadableError') {
+                    showMessage('無法存取螢幕，請確認權限設定', 'error');
+                } else if (error.name === 'AbortError') {
+                    showMessage('錄影被中斷', 'info');
+                } else {
+                    showMessage('錯誤: ' + (error.message || '未知錯誤'), 'error');
+                }
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+            if (durationTimeout) {
+                clearTimeout(durationTimeout);
+                durationTimeout = null;
+            }
+            maxDuration = 0;
+            updateUI(false);
+            stopTimer();
+        }
+
+        function pauseRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.pause();
+                elements.pauseBtn.classList.add('hidden');
+                elements.resumeBtn.classList.remove('hidden');
+                setStatus('已暫停', 'paused');
+                stopTimer();
+                showMessage('錄影已暫停', 'info');
+            }
+        }
+
+        function resumeRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'paused') {
+                mediaRecorder.resume();
+                elements.resumeBtn.classList.add('hidden');
+                elements.pauseBtn.classList.remove('hidden');
+                setStatus('錄影中', 'recording');
+                startTimer(elapsedSeconds);
+                showMessage('錄影已繼續', 'success');
+            }
+        }
+
+        function saveRecording() {
+            if (recordedChunks.length === 0) {
+                showMessage('沒有錄影資料', 'error');
+                return;
+            }
+
+            const mimeType = getSupportedMimeType();
+            const blob = new Blob(recordedChunks, { type: mimeType });
+            const now = new Date();
+            const filename = `螢幕錄影_${now.toISOString().slice(0, 10)}_${now.toTimeString().slice(0, 8).replace(/:/g, '-')}.webm`;
+
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showMessage('已儲存: ' + filename, 'success');
+        }
+
+        function cleanupRecording() {
+            if (recordingStream) {
+                recordingStream.getTracks().forEach(t => t.stop());
+                recordingStream = null;
+            }
+            mediaRecorder = null;
+            recordedChunks = [];
+            elapsedSeconds = 0;
+        }
+
+        function getSupportedMimeType() {
+            const types = [
+                'video/webm;codecs=vp9,opus',
+                'video/webm;codecs=vp8,opus',
+                'video/webm'
+            ];
+            for (const t of types) {
+                if (MediaRecorder.isTypeSupported(t)) return t;
+            }
+            return 'video/webm';
+        }
+
+        function updateUI(isRecording) {
+            elements.startBtn.classList.toggle('hidden', isRecording);
+            elements.stopBtn.classList.toggle('hidden', !isRecording);
+            elements.pauseGroup.classList.toggle('hidden', !isRecording);
+            elements.pauseBtn.classList.remove('hidden');
+            elements.resumeBtn.classList.add('hidden');
+            elements.settings.style.opacity = isRecording ? '0.5' : '1';
+            elements.settings.style.pointerEvents = isRecording ? 'none' : 'auto';
+
+            if (isRecording) {
+                setStatus('錄影中', 'recording');
+            } else if (scheduledDateTime) {
+                setStatus('已排程', 'scheduled');
+            } else {
+                setStatus('準備就緒', '');
+            }
+
+            if (!isRecording) {
+                elements.timer.textContent = '00:00:00';
+            }
+        }
+
+        function setStatus(text, state) {
+            elements.statusText.textContent = text;
+            elements.statusDot.className = 'status-dot ' + state;
+        }
+
+        function startTimer(initial = 0) {
+            elapsedSeconds = initial;
+            updateTimerDisplay();
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                elapsedSeconds++;
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function updateTimerDisplay() {
+            const h = Math.floor(elapsedSeconds / 3600);
+            const m = Math.floor((elapsedSeconds % 3600) / 60);
+            const s = elapsedSeconds % 60;
+            elements.timer.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        function showMessage(text, type) {
+            elements.message.textContent = text;
+            elements.message.className = 'message show ' + type;
+            setTimeout(() => elements.message.classList.remove('show'), 4000);
+        }
+
+        // 監聽頁面關閉
+        window.addEventListener('beforeunload', (e) => {
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                e.preventDefault();
+                e.returnValue = '錄影中，確定要關閉嗎？';
+            }
+        });
+    </script>
+</body>
+
+</html>
